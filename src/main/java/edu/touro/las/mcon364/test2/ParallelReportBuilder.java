@@ -1,5 +1,6 @@
 package edu.touro.las.mcon364.test2;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,27 +31,51 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ParallelReportBuilder {
 
-    /** Simple domain object. Do not modify. */
-    public record Transaction(String id, int amount) {}
+    /**
+     * Simple domain object. Do not modify.
+     */
+    public record Transaction(String id, int amount) {
+    }
 
-    /** Do not modify. */
+    /**
+     * Do not modify.
+     */
     public record BatchStats(long totalAmount,
                              long transactionCount,
                              int maxTransactionAmount,
-                             int minTransactionAmount) {}
+                             int minTransactionAmount) {
+    }
 
-    /** Do not modify. */
+    /**
+     * Do not modify.
+     */
     public record ReportSummary(long totalAmount,
                                 long totalCount,
                                 int globalMax,
                                 int globalMin,
-                                int batchesProcessed) {}
+                                int batchesProcessed) {
+    }
 
 
     // TODO 1: declare and initialize private thread-safe progress tracking state called numberOfBatchesProcessed
-    
+    public void numberOfBatchProcessed(long totalAmount, int batchesProcessed) {
+        System.out.println("[raw] creating one Thread per task — not scalable!");
+        List<Thread> threads = new ArrayList<>();
+        for (String name : batchesProcessed) {
+            Thread t = new Thread(() ->
+                    System.out.printf("[raw] %s processed by %s%n",
+                            name, Thread.currentThread().getName()));
+            threads.add(t);
+            t.start();
+        }
+        for (Thread t : threads) t.join();
+        System.out.println("[raw] all tasks done");
+    }
+
+
     /*
      * TODO 2 — generateReport(List<List<Transaction>> batches, int workers)
+
      *
      * For each batch, compute:
      * - totalAmount
@@ -72,25 +97,49 @@ public class ParallelReportBuilder {
      * - how to avoid waiting too early
      * - how to handle empty batches or an empty input list
      */
+
     public ReportSummary generateReport(List<List<Transaction>> batches, int workers)
             throws InterruptedException, ExecutionException, IllegalArgumentException {
+        for (int i = 0; i < workers; i++) {
+            List<Transaction> transactions = batches.get(i);
+            batches.set(i, transactions);
 
-        // TODO 2A: validate inputs where appropriate
+            // TODO 2A: validate inputs where appropriate
+            while (batches.get(i).isEmpty()) {
+                throw new IllegalArgumentException();
+            }
+        }
 
         // TODO 2B: create the concurrency structure needed for the pattern you chose
-
+        final AtomicInteger allFinishedTasks = new AtomicInteger(0);
 
         // TODO 2C: submit or assign one unit of work per batch
         // Each unit of work should:
         // - compute BatchStats for that batch
         // - safely record that one more batch has been processed
         // - you have to use streams here
+        Thread worker = new Thread(() -> {
+            int count = 0;
+            for (int i = 0; i < workers; i++) {
+                count++;
+            }
+            totalCount = count;
+            for (int i = 0; i < batches.size(); i++) {
+                List<Transaction> batch = batches.get(i);
+                batches.set(i, batch);
+                globalMax = Math.max(globalMax, batch.size());
+                globalMin = Math.min(globalMin, batch.size());
+            }
+        });
+        worker.start();
+        worker.join();
 
+    }
         long totalAmount = 0;
         long totalCount = 0;
         int globalMax = Integer.MIN_VALUE;
         int globalMin = Integer.MAX_VALUE;
-
+}
         // TODO 2D: after all work has been started, collect results
         // and combine them into the summary variables above
         // you don't have to use streams here. In this case for loop is acceptable
@@ -98,7 +147,7 @@ public class ParallelReportBuilder {
         // TODO 2E: shut down any concurrency resources you created
 
         // TODO 2F: return the completed ReportSummary
-        return null; //placeholder
+        return ReportSummary //placeholder
     }
 
     /*
@@ -107,6 +156,6 @@ public class ParallelReportBuilder {
      * Return the current number of batches processed.
      */
     public int getProcessedBatchCount() {
-       return 0; //placeholder
+       return numberOfBatchProcessed(); //placeholder
     }
 }

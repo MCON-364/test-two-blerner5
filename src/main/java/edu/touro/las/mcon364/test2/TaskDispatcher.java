@@ -2,9 +2,13 @@ package edu.touro.las.mcon364.test2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Problem 2 of 3
@@ -15,6 +19,7 @@ import java.util.concurrent.locks.Lock;
  *
  * TODO 1 — pool
  *   Create a thread pool whose size is capped at POOL_SIZE.
+ *
  *
  * TODO 2 — lock
  *   Choose a lock that allows you to explicitly acquire and release it,
@@ -46,14 +51,14 @@ public class TaskDispatcher {
     public static final int POOL_SIZE = 4;
 
     // TODO 1: replace null with an appropriate class
-    private final ExecutorService pool = null;
+    private final ExecutorService pool = new Executors.newFixedThreadPool(POOL_SIZE);;
 
     // TODO 2: replace null — which Lock implementation lets you lock and unlock explicitly?
-    private final Lock lock = null;
+    private final Lock lock = new ReentrantLock();
 
     // provided — do not change
     private final List<String> results = new ArrayList<>();
-    private int completedCount = 0;
+    private AtomicInteger completedCount = 0;
 
     /*
      *   Hand each task off to the pool. The work each thread does is:
@@ -66,25 +71,40 @@ public class TaskDispatcher {
      */
     public List<Future<String>> dispatch(List<String> tasks) {
         // TODO 3
-        return null; //placeholder
-    }
+        for (String name : tasks) {
+            pool.submit(() -> {
+                completedCount.incrementAndGet();
+                String threadName = Thread.currentThread().getName();
+                synchronized (results) {
+                    results.add(threadName);
+                }
+            });
+        }}
 
     public void recordResult(String result) {
-        //TODO 4
-    }
+            for (String name : results) {
+                pool.submit(() -> {
+                    completedCount.incrementAndGet();
+                    String threadName = Thread.currentThread().getName();
+                    synchronized (result {
+                        results.add(threadName);
+                    }
+                });
+            }}
 
     public void shutdown() throws InterruptedException {
         //TODO 5
+            pool.shutdown();
     }
 
     public List<String> getResults() {
         //TODO 6
-        return null; //placeholder
+       return results //placeholder
     }
 
     public int getCompletedCount() {
         //TODO 6
-        return 0; //placeholder
+        return completedCount //placeholder
     }
 
 }
